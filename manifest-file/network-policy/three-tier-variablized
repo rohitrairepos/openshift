@@ -1,0 +1,108 @@
+car > env.yaml << EOF
+export NAMESPACE="testi-1"
+export APP_LABEL="test-1"
+export CLUSTER_ROLE_NAME="system:openshift:scc:anyuid"
+export DB_APP_LABEL="db-1"
+export WEB_APP_LABEL="web-1"
+export APP_APP_LABEL="app-1"
+export DB_IMAGE="docker.io/mysql"
+export WEB_IMAGE="docker.io/nginx"
+export APP_IMAGE="docker.io/nginx"
+export MYSQL_ROOT_PASSWORD="redhat"
+export REPLICAS="1"
+EOF 
+
+cat > mysql-db.yaml << EOF
+# mysql-db.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${NAMESPACE}
+  labels:
+    app: ${APP_LABEL}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ${CLUSTER_ROLE_NAME}
+rules: null
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ${DB_APP_LABEL}
+  name: ${DB_APP_LABEL}
+  namespace: ${NAMESPACE}
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels:
+      app: ${DB_APP_LABEL}
+  template:
+    metadata:
+      labels:
+        app: ${DB_APP_LABEL}
+    spec:
+      containers:
+      - image: ${DB_IMAGE}
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: ${MYSQL_ROOT_PASSWORD}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ${WEB_APP_LABEL}
+  name: ${WEB_APP_LABEL}
+  namespace: ${NAMESPACE}
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels:
+      app: ${WEB_APP_LABEL}
+  template:
+    metadata:
+      labels:
+        app: ${WEB_APP_LABEL}
+    spec:
+      containers:
+      - image: ${WEB_IMAGE}
+        name: nginx
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ${APP_APP_LABEL}
+  name: ${APP_APP_LABEL}
+  namespace: ${NAMESPACE}
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels:
+      app: ${APP_APP_LABEL}
+  template:
+    metadata:
+      labels:
+        app: ${APP_APP_LABEL}
+    spec:
+      containers:
+      - image: ${APP_IMAGE}
+        name: nginx
+EOF 
+
+source env.yaml
+envsubst < mysql-db.yaml | kubectl apply -f -
+or 
+envsubst < mysql-db.yaml | oc apply -f -
